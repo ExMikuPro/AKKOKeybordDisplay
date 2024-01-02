@@ -5,11 +5,15 @@
 #include "wifi.h"
 #include "WebServer.h"
 
+#include "Arduino.h"
+
 
 #include <WiFi.h>
 #include "SPIFFS.h"
 
 WebServer server(80);
+
+Logger::Loggers WifiLogger("Wifi");
 
 IPAddress WifiNetwork::StrToIP(const String &address) {
     IPAddress IPADDS;
@@ -17,15 +21,49 @@ IPAddress WifiNetwork::StrToIP(const String &address) {
     return IPADDS;
 }
 
-bool WifiNetwork::isConfig() { // 判断收否存在wifi配置
+bool WifiNetwork::isConfig() { // 判断是否存在wifi配置
     return SPIFFS.exists("/config/wifi.txt");
 }
 
-void WifiNetwork::setUp() { // 初始化wifi连接
+
+String echoSSID() {
+    // 输出名称
+    String str = Flash::ReadFlash("wifi.txt");
+    int sde = str.indexOf("ssid=");
+    int pde = str.indexOf("pwd=");
+    return str.substring(sde + 5, pde - 1);
+}
+
+String echoPASSWD() {
+    // 输出密码
+    String str = Flash::ReadFlash("wifi.txt");
+    int pde = str.indexOf("pwd=");
+    return str.substring(pde + 4);
+}
+
+void WifiNetwork::Content() { // 初始化wifi连接
+
+    WiFiClass::mode(WIFI_STA);
+
+    // PasswdConfigParse(Flash::ReadFlash("wifi.txt"));
+
+    WiFi.begin(echoSSID().c_str(), echoPASSWD().c_str());
+    // WiFi.begin("kalin", "ruoxiaokelianwuzhu");
+    while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+        WifiLogger.info(String(WiFi.waitForConnectResult()).c_str());
+        WifiLogger.info(WiFi.localIP().toString().c_str());
+        delay(500);
+        // Serial.print(".");
+    }
+    if (WiFi.isConnected()) {
+        WifiLogger.info("连接成功");
+    } else {
+        WifiLogger.info("连接未成功");
+    }
 }
 
 
-void WifiNetwork::setUp(const String &addr) { // 初始化wifi连接
+void WifiNetwork::WEBStart(const String &addr) { // 初始化wifi配置页面
     wifiWeb(addr);
 }
 
@@ -35,9 +73,10 @@ void WifiNetwork::setUp(const String &addr) { // 初始化wifi连接
             StrToIP("10.0.3.1"),
             StrToIP("255.255.255.0")
     );
-    WiFi.softAP("Link");
+    WiFi.softAP("Keyboard");
     server.on("/", page::index);
     server.on("/config", page::config);
+    WifiLogger.info("wifi服务开启");
     server.begin();
     while (true) {
         server.handleClient();
@@ -63,14 +102,6 @@ void page::index() {
     server.send(200, "text/html", ret);
 }
 
-void writeFlash(String str, String filename) {
-    SPIFFS.format();
-    File dataFile = SPIFFS.open("/config/" + filename, "w");
-    Serial.println("参数写入：");
-    Serial.println(str);
-    Serial.println(dataFile.println(str));
-    dataFile.close();
-}
 
 void page::config() {
     String ssid = server.arg("ssid");
@@ -87,15 +118,11 @@ void page::config() {
             String("<html><head><meta charset=\"utf-8\"><title>easyLink</title></head><body>") + String("<center>") +
             String("<h2>配网写入失败：缺少关键的信息</h2>") + String("<p>请返回配置页面，重新配置，并填入正确信息～</p>") +
             String("<input type=\"submit\" value=\"返回配网页面\" onclick=\"javascript:history.back();\"></center></body></html>");
-
     if (ssid != "" && pwd != "") {
-
-        writeFlash(retStr, "wifi.txt");
-
+        Flash::writeFlash(retStr, "wifi.txt");
     } else {
         server.send(200, "text/html", ret1);
     }
-
     server.send(200, "text/html", ret);
     delay(5000);
     ESP.restart(); // 重启模块

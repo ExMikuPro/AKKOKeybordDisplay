@@ -9,20 +9,23 @@
 
 #include "Arduino.h"
 #include "webPage.h"
+#include "Logger/Loggers.h"
+#include "Flash/flash.h"
 
 namespace WifiNetwork {
     IPAddress StrToIP(const String &address);
 
     bool isConfig();
 
-    void setUp();
+    void Content();
 
-    void setUp(const String &addr);
+    void WEBStart(const String &addr);
 
     [[noreturn]] void wifiWeb(const String &addr);
 }
 
 namespace page {
     void index();
+
     void config();
 }

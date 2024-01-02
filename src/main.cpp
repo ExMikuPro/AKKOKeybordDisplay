@@ -3,6 +3,8 @@
 #include "SPIFFS.h"
 
 #include "network/wifi.h"
+#include "Flash/flash.h"
+#include "WiFi.h"
 
 /* ========================= 接线定义 ========================
  * SDA -> GPIO21
@@ -14,6 +16,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE); 
 void setup() {
     Serial.begin(115200);
     SPIFFS.begin();
+    // Flash::FormatFlash(); // 格式化内存
     u8g2.begin();
     u8g2.enableUTF8Print();
 
@@ -25,6 +28,7 @@ void setup() {
         WifiNetwork::WEBStart("10.0.3.9");
     } else {
         WifiNetwork::Content();  // wifi连接
+        // Flash::FormatFlash();
     }
 }
 
